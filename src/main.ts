@@ -30,6 +30,9 @@ function main(): void {
       "ℹ️ GAME_NAME environment variable is not set, using default: col"
     );
   }
+  if (!process.env.DISCORD_WEBHOOK_URL) {
+    console.warn("⚠️ DISCORD_WEBHOOK_URL environment variable is not set, webhook notifications will fail");
+  }
 
   // Start monitoring the directory, default to "./data"
   const directoryToWatch: string = process.env.WATCH_DIRECTORY || "./data";

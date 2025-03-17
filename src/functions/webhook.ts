@@ -5,8 +5,12 @@ export async function sendWebHook(
   discordId: string,
   nextUser: string
 ): Promise<void> {
-  const webhookUrl: string =
-    "https://discord.com/api/webhooks/1351246738085904474/IkTtpxWitgrA2G_9iXrd6Oskz9p1_Ln-ZbMORY2gxKwluw_3LdYnFvxJsbYu2fjLXiC8";
+  const webhookUrl: string = process.env.DISCORD_WEBHOOK_URL!;
+  
+  if (!webhookUrl) {
+    console.error("❌ DISCORD_WEBHOOK_URL environment variable is not set");
+    return;
+  }
   
   const gameName: string = process.env.GAME_NAME || "col";
 

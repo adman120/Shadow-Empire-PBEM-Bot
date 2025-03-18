@@ -39,15 +39,10 @@ function main(): void {
     console.warn("⚠️ WATCH_DIRECTORY environment variable is not set, using default: ./data");
   }
 
-  // Check if DETECTION_TIMEOUT is set
-  const detectionTimeout = process.env.DETECTION_TIMEOUT ? 
-    parseInt(process.env.DETECTION_TIMEOUT) : 60000; // Default to 1 minute
-  console.log(`⏱️ Detection timeout set to ${detectionTimeout/1000} seconds`);
-
   // Start monitoring the directory, default to "./data"
   const directoryToWatch: string = process.env.WATCH_DIRECTORY || "./data";
   console.log(`👀 Monitoring directory: ${directoryToWatch}`);
-  monitorDirectory(directoryToWatch, detectionTimeout);
+  monitorDirectory(directoryToWatch);
 }
 
 main();

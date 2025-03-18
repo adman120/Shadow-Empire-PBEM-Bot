@@ -12,50 +12,52 @@ export function monitorDirectory(dirPath: string): void {
   // Log the parsed user mappings
   console.log(`👥 Loaded ${Object.keys(usernameToDiscordId).length} user mappings`);
   
-  // Convert to array for easy navigation between users
   const userList = Object.keys(usernameToDiscordId);
 
-  // Log the user list
-  const knownFiles: Set<string> = new Set(fs.readdirSync(dirPath));
+  // Initialize set of known files
+  const knownFiles: Set<string> = new Set(
+    fs.readdirSync(dirPath).map(file => file.toLowerCase())
+  );
+  console.log(`📋 Initialized with ${knownFiles.size} existing files`);
 
-  // Log the known files
-  fs.watch(
-    dirPath,
-    (eventType: fs.WatchEventType, filename: string | Buffer | null): void => {
-      if (!filename) return;
-
-      const filenameStr: string = filename.toString().toLowerCase();
-      const filePath: string = path.join(dirPath, filenameStr);
-
-      if (
-        eventType === "rename" &&
-        fs.existsSync(filePath) &&
-        !knownFiles.has(filenameStr)
-      ) {
-        console.log(`📄 New save file detected: ${filenameStr}`);
-        knownFiles.add(filenameStr);
-
-        // Check for the username inside the filename
-        const username = userList.find((name) =>
-          filenameStr.includes(name.toLowerCase())
-        );
-        
-        if (username) {
-          const discordId = usernameToDiscordId[username];
+  // Set up polling interval (check every 5 seconds)
+  const POLL_INTERVAL = 5000; // 5 seconds
+  
+  setInterval(() => {
+    try {
+      // Get current files in the directory
+      const currentFiles = fs.readdirSync(dirPath).map(file => file.toLowerCase());
+      
+      // Check for new files
+      for (const file of currentFiles) {
+        if (!knownFiles.has(file)) {
+          console.log(`📄 New save file detected: ${file}`);
+          knownFiles.add(file);
           
-          // Find the index of current user and determine next user
-          const currentUserIndex = userList.indexOf(username);
-          const nextUserIndex = (currentUserIndex + 1) % userList.length;
-          const nextUser = userList[nextUserIndex];
-          
-          console.log(`🔄 Turn passing from ${username} to ${nextUser}`);
-          sendWebHook(username, discordId, nextUser);
-        } else {
-          console.log(
-            `❓ Cannot match any user to save file: ${filenameStr}`
+          // Check for the username inside the filename
+          const username = userList.find((name) =>
+            file.includes(name.toLowerCase())
           );
+          
+          if (username) {
+            const discordId = usernameToDiscordId[username];
+            
+            // Find the index of current user and determine next user
+            const currentUserIndex = userList.indexOf(username);
+            const nextUserIndex = (currentUserIndex + 1) % userList.length;
+            const nextUser = userList[nextUserIndex];
+            
+            console.log(`🔄 Turn passing from ${username} to ${nextUser}`);
+            sendWebHook(username, discordId, nextUser);
+          } else {
+            console.log(`❓ Cannot match any user to save file: ${file}`);
+          }
         }
       }
+    } catch (error) {
+      console.error(`❌ Error polling directory: ${error}`);
     }
-  );
+  }, POLL_INTERVAL);
+  
+  console.log(`👁️ Started monitoring directory: ${dirPath} (polling every ${POLL_INTERVAL/1000}s)`);
 }

@@ -4,7 +4,7 @@ import * as path from "path";
 import { sendWebHook } from "./webhook";
 import { userparse } from "./userParser";
 
-export function monitorDirectory(dirPath: string): void {
+export function monitorDirectory(dirPath: string, detectionTimeout: number = 60000): void {
   // Get username to Discord ID mappings from environment variable
   const usernameToDiscordId: Record<string, string> =
     userparse("USER_MAPPINGS");
@@ -20,6 +20,9 @@ export function monitorDirectory(dirPath: string): void {
   );
   console.log(`📋 Initialized with ${knownFiles.size} existing files`);
 
+  // Track when files were last processed to prevent duplicates
+  const fileProcessTimes: Map<string, number> = new Map();
+
   // Set up polling interval (check every 5 seconds)
   const POLL_INTERVAL = 5000; // 5 seconds
   
@@ -33,6 +36,18 @@ export function monitorDirectory(dirPath: string): void {
         if (!knownFiles.has(file)) {
           console.log(`📄 New save file detected: ${file}`);
           knownFiles.add(file);
+          
+          const currentTime = Date.now();
+          const lastProcessTime = fileProcessTimes.get(file) || 0;
+          
+          // Check if this file was processed recently (within timeout)
+          if (currentTime - lastProcessTime < detectionTimeout) {
+            console.log(`⏱️ Skipping recently processed file: ${file} (within ${detectionTimeout/1000}s timeout)`);
+            continue;
+          }
+          
+          // Update the process time for this file
+          fileProcessTimes.set(file, currentTime);
           
           // Check for the username inside the filename
           const username = userList.find((name) =>
@@ -59,5 +74,5 @@ export function monitorDirectory(dirPath: string): void {
     }
   }, POLL_INTERVAL);
   
-  console.log(`👁️ Started monitoring directory: ${dirPath} (polling every ${POLL_INTERVAL/1000}s)`);
+  console.log(`👁️ Started monitoring directory: ${dirPath} (polling every ${POLL_INTERVAL/1000}s, detection timeout: ${detectionTimeout/1000}s)`);
 }

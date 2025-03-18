@@ -33,6 +33,11 @@ function main(): void {
   if (!process.env.DISCORD_WEBHOOK_URL) {
     console.warn("⚠️ DISCORD_WEBHOOK_URL environment variable is not set, webhook notifications will fail");
   }
+  
+  // Check if WATCH_DIRECTORY is set
+  if (!process.env.WATCH_DIRECTORY) {
+    console.warn("⚠️ WATCH_DIRECTORY environment variable is not set, using default: ./data");
+  }
 
   // Start monitoring the directory, default to "./data"
   const directoryToWatch: string = process.env.WATCH_DIRECTORY || "./data";

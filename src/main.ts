@@ -39,6 +39,11 @@ function main(): void {
     console.warn("⚠️ WATCH_DIRECTORY environment variable is not set, using default: ./data");
   }
 
+  // Check if IGNORE_PATTERNS is set
+  if (process.env.IGNORE_PATTERNS) {
+    console.log(`🔍 Will ignore files containing patterns: ${process.env.IGNORE_PATTERNS}`);
+  }
+
   // Start monitoring the directory, default to "./data"
   const directoryToWatch: string = process.env.WATCH_DIRECTORY || "./data";
   console.log(`👀 Monitoring directory: ${directoryToWatch}`);

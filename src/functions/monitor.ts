@@ -1,13 +1,42 @@
 import * as fs from "fs";
-import * as path from "path";
 
 import { sendWebHook } from "./webhook";
 import { userparse } from "./userParser";
 
+/**
+ * Parse comma-separated ignore patterns from environment variable
+ */
+function parseIgnorePatterns(): string[] {
+  const patterns = process.env.IGNORE_PATTERNS;
+  if (!patterns) {
+    return [];
+  }
+  return patterns.split(',').map(pattern => pattern.trim().toLowerCase());
+}
+
+/**
+ * Check if a filename contains any of the ignore patterns
+ */
+function shouldIgnoreFile(filename: string, ignorePatterns: string[]): boolean {
+  if (ignorePatterns.length === 0) return false;
+  
+  const lowerFilename = filename.toLowerCase();
+  return ignorePatterns.some(pattern => lowerFilename.includes(pattern));
+}
+
+/**
+ * Monitor a directory for new save files and notify the next player in the turn order
+ */
 export function monitorDirectory(dirPath: string): void {
   // Get username to Discord ID mappings from environment variable
   const usernameToDiscordId: Record<string, string> =
     userparse("USER_MAPPINGS");
+
+  // Parse ignore patterns
+  const ignorePatterns = parseIgnorePatterns();
+  if (ignorePatterns.length > 0) {
+    console.log(`🚫 Loaded ${ignorePatterns.length} ignore patterns`);
+  }
 
   // Log the parsed user mappings
   console.log(`👥 Loaded ${Object.keys(usernameToDiscordId).length} user mappings`);
@@ -33,6 +62,12 @@ export function monitorDirectory(dirPath: string): void {
         if (!knownFiles.has(file)) {
           console.log(`📄 New save file detected: ${file}`);
           knownFiles.add(file);
+          
+          // Check if the file should be ignored based on patterns
+          if (shouldIgnoreFile(file, ignorePatterns)) {
+            console.log(`🚫 Ignoring file ${file} based on ignore patterns`);
+            continue;
+          }
           
           // Check for the username inside the filename
           const username = userList.find((name) =>

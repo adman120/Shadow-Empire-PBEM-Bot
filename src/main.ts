@@ -43,6 +43,13 @@ function main(): void {
   if (process.env.IGNORE_PATTERNS) {
     console.log(`🔍 Will ignore files containing patterns: ${process.env.IGNORE_PATTERNS}`);
   }
+  
+  // Check if FILE_DEBOUNCE_MS is set
+  if (!process.env.FILE_DEBOUNCE_MS) {
+    console.log("ℹ️ FILE_DEBOUNCE_MS environment variable is not set, using default: 30000 (30 seconds)");
+  } else {
+    console.log(`⏱️ File debounce time set to ${parseInt(process.env.FILE_DEBOUNCE_MS)/1000} seconds`);
+  }
 
   // Start monitoring the directory, default to "./data"
   const directoryToWatch: string = process.env.WATCH_DIRECTORY || "./data";

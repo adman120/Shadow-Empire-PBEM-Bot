@@ -1,22 +1,19 @@
 ## Build the app
-FROM node:23-alpine AS builder
+FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY tsconfig.json .
-COPY src/ ./src/
-RUN npm run build
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN go build -o shadow-empire-bot .
 
 ## Run the app
-FROM node:23-alpine
+FROM alpine:latest
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/shadow-empire-bot .
 RUN mkdir -p /app/data
 VOLUME /app/data
-ENV NODE_ENV=production
 ENV WATCH_DIRECTORY=/app/data
 
-CMD ["node", "dist/main.js"]
+CMD ["./shadow-empire-bot"]

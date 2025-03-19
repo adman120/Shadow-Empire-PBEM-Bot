@@ -34,7 +34,7 @@ func main() {
 		os.Exit(1)
 	}
 	if os.Getenv("GAME_NAME") == "" {
-		fmt.Println("ℹ️ GAME_NAME environment variable is not set, using default: col")
+		fmt.Println("ℹ️ GAME_NAME environment variable is not set, using default: pbem1")
 	}
 	if os.Getenv("DISCORD_WEBHOOK_URL") == "" {
 		fmt.Println("⚠️ DISCORD_WEBHOOK_URL environment variable is not set, webhook notifications will fail")

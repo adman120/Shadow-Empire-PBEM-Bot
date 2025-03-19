@@ -49,7 +49,7 @@ func SendWebHook(username, discordID, nextUser string) error {
 
 	gameName := os.Getenv("GAME_NAME")
 	if gameName == "" {
-		gameName = "col"
+		gameName = "pbem1"
 	}
 
 	// Create webhook payload

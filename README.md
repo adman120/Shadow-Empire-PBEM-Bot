@@ -67,7 +67,7 @@ go build -o shadow-empire-bot .
 | Variable              | Description                                                                      | Required | Default  |
 | --------------------- | -------------------------------------------------------------------------------- | -------- | -------- |
 | `USER_MAPPINGS`       | Comma-separated list of usernames and Discord IDs (format: `Username DiscordID`) | Yes      | None     |
-| `GAME_NAME`           | Name prefix for save files                                                       | No       | "col"    |
+| `GAME_NAME`           | Name prefix for save files                                                       | No       | "pbem1"    |
 | `DISCORD_WEBHOOK_URL` | Discord webhook URL for notifications                                            | Yes      | None     |
 | `WATCH_DIRECTORY`     | Directory to monitor for save files                                              | No       | "./data" |
 | `IGNORE_PATTERNS`     | Comma-separated patterns to ignore in filenames                                  | No       | None     |

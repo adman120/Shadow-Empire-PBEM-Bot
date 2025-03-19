@@ -2,7 +2,7 @@
 
 # Shadow Empire PBEM Bot
 
-_A Discord bot for automating player turns in Shadow Empire Play-By-Email (PBEM) games._
+_A Discord bot for automating player turns in Shadow Empire Play-By-Email (PBEM) games. Works in conjunction with file synchronization tools like Dropbox, Google Drive, or SyncThing._
 
 </div>
 
@@ -40,10 +40,11 @@ services:
   shadow-empire-bot:
     image: ghcr.io/1solon/shadow-empire-pbem-bot:latest
     volumes:
-      - ./data:/app/data
+      # Map to Shadow Empire's default save location
+      - "C:/Users/<username>/Documents/My Games/Shadow Empire/<game name>:/app/data"
     environment:
       - USER_MAPPINGS=Player1 123456789012345678,Player2 234567890123456789
-      - GAME_NAME=campaign1
+      - GAME_NAME=PBEM1
       - DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your-webhook-url
       - WATCH_DIRECTORY=/app/data
       - IGNORE_PATTERNS=backup,temp
@@ -78,7 +79,7 @@ The bot also supports loading environment variables from a `.env` file. Create a
 
 ```
 USER_MAPPINGS=Player1 123456789012345678,Player2 234567890123456789
-GAME_NAME=campaign1
+GAME_NAME=PBEM1
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your-webhook-url
 WATCH_DIRECTORY=./data
 IGNORE_PATTERNS=backup,temp
@@ -91,7 +92,8 @@ FILE_DEBOUNCE_MS=30000
 
 1. Create a Discord webhook in your server
 2. Configure environment variables with player names and their Discord IDs (either through environment variables or a .env file)
-3. Set up a shared folder for save files (could be Dropbox, Google Drive, etc.)
+3. Set up a shared folder for save files using a file synchronization tool (Dropbox, Google Drive, SyncThing, etc.)
+   - Recommendation: Use Shadow Empire's default save location: `C:\Users\<username>\Documents\My Games\Shadow Empire\<game name>`
 4. Run the bot pointing to this shared folder
 
 ### Running with Docker
@@ -99,9 +101,9 @@ FILE_DEBOUNCE_MS=30000
 ```sh
 docker run -d \
   -e USER_MAPPINGS="Player1 123456789012345678,Player2 234567890123456789" \
-  -e GAME_NAME="campaign1" \
+  -e GAME_NAME="PBEM1" \
   -e DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/your-webhook-url" \
-  -v /path/to/saves:/app/data \
+  -v "C:/Users/<username>/Documents/My Games/Shadow Empire/<game name>:/app/data" \
   ghcr.io/1solon/shadow-empire-pbem-bot:latest
 ```
 
@@ -109,16 +111,24 @@ docker run -d \
 
 ```sh
 export USER_MAPPINGS="Player1 123456789012345678,Player2 234567890123456789"
-export GAME_NAME="campaign1"
+export GAME_NAME="PBEM1"
 export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/your-webhook-url"
-export WATCH_DIRECTORY="./data"
+export WATCH_DIRECTORY="C:/Users/<username>/Documents/My Games/Shadow Empire/<game name>"
 ./shadow-empire-bot
 ```
 
 ### Save File Naming Convention
 
-Players should save their files using the following format:
+The main Shadow Empire multiplayer community uses these naming formats:
 
 ```
-campaign1_turn1_Player1
+PBEM1_turn1_Player1
 ```
+
+or
+
+```
+PBEM1_Player1_turn1
+```
+
+The number in PBEM1 can be incremented for different game instances (PBEM2, PBEM3, etc.)

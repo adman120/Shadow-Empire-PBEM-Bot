@@ -72,12 +72,25 @@ go build -o shadow-empire-bot .
 | `IGNORE_PATTERNS`     | Comma-separated patterns to ignore in filenames                                  | No       | None     |
 | `FILE_DEBOUNCE_MS`    | Milliseconds to wait after file detection before processing                      | No       | 30000    |
 
+### .env File Support
+
+The bot also supports loading environment variables from a `.env` file. Create a file named `.env` in the same directory as the bot executable (or in your mounted `/app` directory when using Docker):
+
+```
+USER_MAPPINGS=Player1 123456789012345678,Player2 234567890123456789
+GAME_NAME=campaign1
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your-webhook-url
+WATCH_DIRECTORY=./data
+IGNORE_PATTERNS=backup,temp
+FILE_DEBOUNCE_MS=30000
+```
+
 ## 📖 Usage
 
 ### Setup
 
 1. Create a Discord webhook in your server
-2. Configure environment variables with player names and their Discord IDs
+2. Configure environment variables with player names and their Discord IDs (either through environment variables or a .env file)
 3. Set up a shared folder for save files (could be Dropbox, Google Drive, etc.)
 4. Run the bot pointing to this shared folder
 

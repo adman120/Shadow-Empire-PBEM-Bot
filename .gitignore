@@ -1,4 +1,15 @@
 data
+.env
+shadow-empire-bot
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/vendor/
+/Godeps/
 node_modules
 dist
-.env
+.vscode

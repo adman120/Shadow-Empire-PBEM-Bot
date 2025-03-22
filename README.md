@@ -78,7 +78,7 @@ go build -o shadow-empire-bot .
 
 The bot also supports loading environment variables from a `.env` file. Create a file named `.env` in the same directory as the bot executable (or in your mounted `/app` directory when using Docker):
 
-```
+```yaml
 USER_MAPPINGS=Player1 123456789012345678,Player2 234567890123456789
 GAME_NAME=PBEM1
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your-webhook-url
@@ -96,6 +96,29 @@ FILE_DEBOUNCE_MS=30000
 3. Set up a shared folder for save files using a file synchronization tool (Dropbox, Google Drive, SyncThing, etc.)
    - Recommendation: Use Shadow Empire's default save location: `C:\Users\<username>\Documents\My Games\Shadow Empire\<game name>`
 4. Run the bot pointing to this shared folder
+
+### Understanding USER_MAPPINGS
+
+The `USER_MAPPINGS` environment variable is a comma-separated list that connects in-game player names with Discord user IDs:
+
+```yaml
+USER_MAPPINGS=Player1 123456789012345678,Player2 234567890123456789
+```
+
+Each mapping follows the format `PlayerName DiscordUserID`, with multiple mappings separated by commas.
+
+#### How to Get Discord User IDs
+
+To get a Discord user ID:
+
+1. Open Discord settings by clicking the gear icon near your username
+2. Go to "Advanced" and enable "Developer Mode"
+3. Right-click on the username of any user in your server
+4. Select "Copy ID" from the context menu
+
+The copied ID is a long number (e.g., 123456789012345678) that uniquely identifies that Discord user.
+
+When configuring the bot, make sure the in-game player names exactly match the names of the players.
 
 ### Running with Docker
 
@@ -122,13 +145,13 @@ export WATCH_DIRECTORY="C:/Users/<username>/Documents/My Games/Shadow Empire/<ga
 
 The main Shadow Empire multiplayer community uses these naming formats:
 
-```
+```yaml
 PBEM1_turn1_Player1
 ```
 
 or
 
-```
+```yaml
 PBEM1_Player1_turn1
 ```
 

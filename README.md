@@ -18,6 +18,7 @@ _A Discord bot for automating player turns in Shadow Empire Play-By-Email (PBEM)
 - Monitors a directory for new Shadow Empire save files
 - Automatically detects which player just completed their turn
 - Notifies the next player via Discord webhook when it's their turn
+- Automatically detects if a save file is misnamed and informs the player
 - Configurable file name pattern matching and debouncing
 - Runs in Docker for easy deployment
 - Lightweight and efficient
@@ -67,7 +68,7 @@ go build -o shadow-empire-bot .
 | Variable              | Description                                                                      | Required | Default  |
 | --------------------- | -------------------------------------------------------------------------------- | -------- | -------- |
 | `USER_MAPPINGS`       | Comma-separated list of usernames and Discord IDs (format: `Username DiscordID`) | Yes      | None     |
-| `GAME_NAME`           | Name prefix for save files                                                       | No       | "pbem1"    |
+| `GAME_NAME`           | Name prefix for save files                                                       | No       | "pbem1"  |
 | `DISCORD_WEBHOOK_URL` | Discord webhook URL for notifications                                            | Yes      | None     |
 | `WATCH_DIRECTORY`     | Directory to monitor for save files                                              | No       | "./data" |
 | `IGNORE_PATTERNS`     | Comma-separated patterns to ignore in filenames                                  | No       | None     |

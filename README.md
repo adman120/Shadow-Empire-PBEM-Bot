@@ -4,14 +4,12 @@
 
 _A Discord bot for automating player turns in Shadow Empire Play-By-Email (PBEM) games. Works in conjunction with file synchronization tools like Dropbox, Google Drive, or SyncThing._
 
-</div>
-
-<div align="center">
-
 ![GitHub Repo stars](https://img.shields.io/github/stars/1Solon/shadow-empire-pbem-bot?style=for-the-badge)
 ![GitHub forks](https://img.shields.io/github/forks/1Solon/shadow-empire-pbem-bot?style=for-the-badge)
 
 </div>
+
+---
 
 ## ✨ Features
 
@@ -23,13 +21,15 @@ _A Discord bot for automating player turns in Shadow Empire Play-By-Email (PBEM)
 - Runs in Docker for easy deployment
 - Lightweight and efficient
 
+---
+
 ## 🚀 Installation
 
 ### Docker (Recommended)
 
 Pull the latest image from GitHub Container Registry:
 
-```sh
+```bash
 docker pull ghcr.io/1solon/shadow-empire-pbem-bot:latest
 ```
 
@@ -57,28 +57,30 @@ services:
 
 To build and run locally:
 
-```sh
+```bash
 git clone https://github.com/1Solon/shadow-empire-pbem-bot.git
 cd shadow-empire-pbem-bot
 go build -o shadow-empire-bot .
 ```
 
+---
+
 ## 📚 Environment Variables
 
 | Variable              | Description                                                                      | Required | Default  |
-| --------------------- | -------------------------------------------------------------------------------- | -------- | -------- |
-| `USER_MAPPINGS`       | Comma-separated list of usernames and Discord IDs (format: `Username DiscordID`) | Yes      | None     |
-| `GAME_NAME`           | Name prefix for save files                                                       | No       | "pbem1"  |
-| `DISCORD_WEBHOOK_URL` | Discord webhook URL for notifications                                            | Yes      | None     |
-| `WATCH_DIRECTORY`     | Directory to monitor for save files                                              | No       | "./data" |
-| `IGNORE_PATTERNS`     | Comma-separated patterns to ignore in filenames                                  | No       | None     |
-| `FILE_DEBOUNCE_MS`    | Milliseconds to wait after file detection before processing                      | No       | 30000    |
+| :-------------------- | :------------------------------------------------------------------------------- | :------: | :------- |
+| `USER_MAPPINGS`       | Comma-separated list of usernames and Discord IDs (format: `Username DiscordID`) |    ✅    | None     |
+| `GAME_NAME`           | Name prefix for save files                                                       |    ❌    | "pbem1"  |
+| `DISCORD_WEBHOOK_URL` | Discord webhook URL for notifications                                            |    ✅    | None     |
+| `WATCH_DIRECTORY`     | Directory to monitor for save files                                              |    ❌    | "./data" |
+| `IGNORE_PATTERNS`     | Comma-separated patterns to ignore in filenames                                  |    ❌    | None     |
+| `FILE_DEBOUNCE_MS`    | Milliseconds to wait after file detection before processing                      |    ❌    | 30000    |
 
 ### .env File Support
 
 The bot also supports loading environment variables from a `.env` file. Create a file named `.env` in the same directory as the bot executable (or in your mounted `/app` directory when using Docker):
 
-```yaml
+```ini
 USER_MAPPINGS=Player1 123456789012345678,Player2 234567890123456789
 GAME_NAME=PBEM1
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your-webhook-url
@@ -87,21 +89,25 @@ IGNORE_PATTERNS=backup,temp
 FILE_DEBOUNCE_MS=30000
 ```
 
+---
+
 ## 📖 Usage
 
 ### Setup
 
 1. Create a Discord webhook in your server
-2. Configure environment variables with player names and their Discord IDs (either through environment variables or a .env file)
-3. Set up a shared folder for save files using a file synchronization tool (Dropbox, Google Drive, SyncThing, etc.)
-   - Recommendation: Use Shadow Empire's default save location: `C:\Users\<username>\Documents\My Games\Shadow Empire\<game name>`
+2. Configure environment variables with player names and their Discord IDs
+3. Set up a shared folder for save files using a file synchronization tool
 4. Run the bot pointing to this shared folder
+
+> **Recommendation:** Use Shadow Empire's default save location:  
+> `C:\Users\<username>\Documents\My Games\Shadow Empire\<game name>`
 
 ### Understanding USER_MAPPINGS
 
-The `USER_MAPPINGS` environment variable is a comma-separated list that connects in-game player names with Discord user IDs:
+The `USER_MAPPINGS` environment variable connects in-game player names with Discord user IDs:
 
-```yaml
+```ini
 USER_MAPPINGS=Player1 123456789012345678,Player2 234567890123456789
 ```
 
@@ -118,11 +124,11 @@ To get a Discord user ID:
 
 The copied ID is a long number (e.g., 123456789012345678) that uniquely identifies that Discord user.
 
-When configuring the bot, make sure the in-game player names exactly match the names of the players.
+> **Important:** Make sure the in-game player names exactly match the names of the players in your Shadow Empire game.
 
 ### Running with Docker
 
-```sh
+```bash
 docker run -d \
   -e USER_MAPPINGS="Player1 123456789012345678,Player2 234567890123456789" \
   -e GAME_NAME="PBEM1" \
@@ -131,9 +137,9 @@ docker run -d \
   ghcr.io/1solon/shadow-empire-pbem-bot:latest
 ```
 
-### Running from source
+### Running from Source
 
-```sh
+```bash
 export USER_MAPPINGS="Player1 123456789012345678,Player2 234567890123456789"
 export GAME_NAME="PBEM1"
 export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/your-webhook-url"
@@ -141,18 +147,20 @@ export WATCH_DIRECTORY="C:/Users/<username>/Documents/My Games/Shadow Empire/<ga
 ./shadow-empire-bot
 ```
 
+---
+
 ### Save File Naming Convention
 
 The main Shadow Empire multiplayer community uses these naming formats:
 
-```yaml
+```
 PBEM1_turn1_Player1
 ```
 
 or
 
-```yaml
+```
 PBEM1_Player1_turn1
 ```
 
-The number in PBEM1 can be incremented for different game instances (PBEM2, PBEM3, etc.)
+> **Note:** The number in PBEM1 can be incremented for different game instances (PBEM2, PBEM3, etc.)

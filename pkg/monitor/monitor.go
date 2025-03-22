@@ -115,6 +115,12 @@ func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 
 	now := time.Now().UnixMilli()
 
+	// Get the configured game name
+	gameName := strings.ToLower(os.Getenv("GAME_NAME"))
+	if gameName == "" {
+		gameName = "pbem1"
+	}
+
 	// Track current files to detect deleted ones
 	currentFiles := make(map[string]bool)
 
@@ -148,6 +154,48 @@ func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 			// Check if the file should be ignored
 			if shouldIgnoreFile(filename, ignorePatterns) {
 				fmt.Printf("🚫 Ignoring file %s based on ignore patterns\n", filename)
+				info.Processed = true
+				continue
+			}
+
+			// Check if the game name in the filename matches the configured game name
+			if !strings.HasPrefix(filename, gameName) {
+				fmt.Printf("⚠️ File %s doesn't match configured game name '%s'\n", filename, gameName)
+
+				// Try to find a username in the file even if the game name is wrong
+				var foundUser string
+				for _, username := range userList {
+					if strings.Contains(filename, strings.ToLower(username)) {
+						foundUser = username
+						break
+					}
+				}
+
+				// Find the previous user who should be notified about the naming issue
+				var previousUser string
+				var previousUserDiscordID string
+
+				if foundUser != "" {
+					// Find the previous user in the turn order
+					previousUserIndex := -1
+					for i, user := range userList {
+						if user == foundUser {
+							// Get previous user (wrapping around if necessary)
+							previousUserIndex = (i - 1 + len(userList)) % len(userList)
+							break
+						}
+					}
+
+					if previousUserIndex >= 0 {
+						previousUser = userList[previousUserIndex]
+						previousUserDiscordID = usernameToDiscordID[previousUser]
+						fmt.Printf("🔔 Sending rename notification to previous user %s for incorrectly named file %s\n", previousUser, filename)
+						webhook.SendRenameWebHook(previousUser, previousUserDiscordID, filename)
+					}
+				} else {
+					fmt.Printf("❓ Cannot identify any user for incorrectly named file: %s\n", filename)
+				}
+
 				info.Processed = true
 				continue
 			}

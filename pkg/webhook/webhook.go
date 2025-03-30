@@ -9,36 +9,9 @@ import (
 	"net/url"
 	"os"
 	"time"
+
+	"github.com/1Solon/shadow-empire-pbem-bot/pkg/types"
 )
-
-// Discord webhook request structure
-type DiscordWebhook struct {
-	Username  string  `json:"username"`
-	AvatarURL string  `json:"avatar_url"`
-	Content   string  `json:"content"`
-	Embeds    []Embed `json:"embeds"`
-}
-
-type Embed struct {
-	Color     int       `json:"color"`
-	Thumbnail Thumbnail `json:"thumbnail"`
-	Fields    []Field   `json:"fields"`
-	Footer    Footer    `json:"footer"`
-	Timestamp string    `json:"timestamp"`
-}
-
-type Thumbnail struct {
-	URL string `json:"url"`
-}
-
-type Field struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
-type Footer struct {
-	Text string `json:"text"`
-}
 
 // prepareWebhookURL adds the wait=true parameter to the webhook URL
 func prepareWebhookURL() (string, error) {
@@ -73,7 +46,7 @@ func getGameName() string {
 }
 
 // sendDiscordWebhook sends a webhook with retry logic and status code handling
-func sendDiscordWebhook(payload *DiscordWebhook, username, discordID string, isRename bool) error {
+func sendDiscordWebhook(payload *types.DiscordWebhook, username, discordID string, isRename bool) error {
 	webhookURL, err := prepareWebhookURL()
 	if err != nil {
 		return err
@@ -148,23 +121,23 @@ func SendWebHook(username, discordID, nextUser string, turnNumber int) error {
 	gameName := getGameName()
 
 	// Create webhook payload
-	payload := DiscordWebhook{
+	payload := types.DiscordWebhook{
 		Username:  "Shadow Empire Assistant",
 		AvatarURL: "https://raw.githubusercontent.com/auricom/home-ops/main/docs/src/assets/logo.png",
 		Content:   fmt.Sprintf("🎲 It's your turn, <@%s>!", discordID),
-		Embeds: []Embed{
+		Embeds: []types.Embed{
 			{
 				Color: 0xFFA500,
-				Thumbnail: Thumbnail{
+				Thumbnail: types.Thumbnail{
 					URL: "https://upload.wikimedia.org/wikipedia/en/4/4f/Shadow_Empire_cover.jpg",
 				},
-				Fields: []Field{
+				Fields: []types.Field{
 					{
 						Name:  "📋 Save File Instructions",
 						Value: fmt.Sprintf("After completing your turn, please save the file as:\n```\n%s_turn%d_%s\n```", gameName, turnNumber, nextUser),
 					},
 				},
-				Footer: Footer{
+				Footer: types.Footer{
 					Text: "Made with ❤️ by Solon",
 				},
 				Timestamp: time.Now().Format(time.RFC3339),
@@ -180,24 +153,24 @@ func SendRenameWebHook(username, discordID, filename string, turnNumber int) err
 	gameName := getGameName()
 
 	// Create webhook payload
-	payload := DiscordWebhook{
+	payload := types.DiscordWebhook{
 		Username:  "Shadow Empire Assistant",
 		AvatarURL: "https://raw.githubusercontent.com/auricom/home-ops/main/docs/src/assets/logo.png",
 		Content:   fmt.Sprintf("⚠️ File naming issue detected in your save, <@%s>!", discordID),
-		Embeds: []Embed{
+		Embeds: []types.Embed{
 			{
 				Color: 0xFF0000, // Red color for warning
-				Thumbnail: Thumbnail{
+				Thumbnail: types.Thumbnail{
 					URL: "https://upload.wikimedia.org/wikipedia/en/4/4f/Shadow_Empire_cover.jpg",
 				},
-				Fields: []Field{
+				Fields: []types.Field{
 					{
 						Name: "📋 File Rename Required",
 						Value: fmt.Sprintf("The save file you created `%s` doesn't match the configured game name.\n\nPlease rename it to follow the format:\n```\n%s_turn%d_%s\n```\n*(Replace %s with the next player's name)*",
 							filename, gameName, turnNumber, "[NextPlayerName]", "[NextPlayerName]"),
 					},
 				},
-				Footer: Footer{
+				Footer: types.Footer{
 					Text: "Made with ❤️ by Solon",
 				},
 				Timestamp: time.Now().Format(time.RFC3339),

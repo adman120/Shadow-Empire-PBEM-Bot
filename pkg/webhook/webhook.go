@@ -144,7 +144,7 @@ func sendDiscordWebhook(payload *DiscordWebhook, username, discordID string, isR
 }
 
 // SendWebHook sends a Discord webhook notification to the next player
-func SendWebHook(username, discordID, nextUser string) error {
+func SendWebHook(username, discordID, nextUser string, turnNumber int) error {
 	gameName := getGameName()
 
 	// Create webhook payload
@@ -161,7 +161,7 @@ func SendWebHook(username, discordID, nextUser string) error {
 				Fields: []Field{
 					{
 						Name:  "📋 Save File Instructions",
-						Value: fmt.Sprintf("After completing your turn, please save the file as:\n```\n%s_turn#_%s\n```\n*(Replace # with the current turn number)*", gameName, nextUser),
+						Value: fmt.Sprintf("After completing your turn, please save the file as:\n```\n%s_turn%d_%s\n```", gameName, turnNumber, nextUser),
 					},
 				},
 				Footer: Footer{
@@ -176,7 +176,7 @@ func SendWebHook(username, discordID, nextUser string) error {
 }
 
 // SendRenameWebHook sends a Discord webhook notification asking to rename a file
-func SendRenameWebHook(username, discordID, filename string) error {
+func SendRenameWebHook(username, discordID, filename string, turnNumber int) error {
 	gameName := getGameName()
 
 	// Create webhook payload
@@ -193,8 +193,8 @@ func SendRenameWebHook(username, discordID, filename string) error {
 				Fields: []Field{
 					{
 						Name: "📋 File Rename Required",
-						Value: fmt.Sprintf("The save file you created `%s` doesn't match the configured game name.\n\nPlease rename it to follow the format:\n```\n%s_turn#_%s\n```\n*(Replace # with the current turn number and %s with the next player's name)*",
-							filename, gameName, "[NextPlayerName]", "[NextPlayerName]"),
+						Value: fmt.Sprintf("The save file you created `%s` doesn't match the configured game name.\n\nPlease rename it to follow the format:\n```\n%s_turn%d_%s\n```\n*(Replace %s with the next player's name)*",
+							filename, gameName, turnNumber, "[NextPlayerName]", "[NextPlayerName]"),
 					},
 				},
 				Footer: Footer{

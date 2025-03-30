@@ -3,6 +3,7 @@ package monitor
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -68,6 +69,9 @@ func MonitorDirectory(dirPath string) {
 	// File tracking map with timestamps to implement debouncing
 	fileTracker := make(map[string]*FileTrackingInfo)
 
+	// Current turn tracking
+	currentTurn := 1
+
 	// Get file debounce time from environment or default to 30 seconds
 	fileDebounceMs := 30000
 	if debounceEnv := os.Getenv("FILE_DEBOUNCE_MS"); debounceEnv != "" {
@@ -104,14 +108,30 @@ func MonitorDirectory(dirPath string) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		processDirectory(dirPath, fileTracker, usernameToDiscordID, userList, fileDebounceMs, ignorePatterns)
+		currentTurn = processDirectory(dirPath, fileTracker, usernameToDiscordID, userList, fileDebounceMs, ignorePatterns, currentTurn)
 	}
 }
 
+// extractTurnNumber attempts to extract turn number from a filename
+func extractTurnNumber(filename string) int {
+	// First try the standard pattern: something_turn#_something
+	turnPattern := regexp.MustCompile(`_turn(\d+)_`)
+	matches := turnPattern.FindStringSubmatch(strings.ToLower(filename))
+
+	if len(matches) > 1 {
+		if num, err := strconv.Atoi(matches[1]); err == nil {
+			return num
+		}
+	}
+
+	return 0 // Return 0 if no turn number found
+}
+
 // processDirectory handles a single directory scan iteration
+// Returns the current turn number (possibly updated)
 func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 	usernameToDiscordID map[string]string, userList []string,
-	fileDebounceMs int, ignorePatterns []string) {
+	fileDebounceMs int, ignorePatterns []string, currentTurn int) int {
 
 	now := time.Now().UnixMilli()
 
@@ -128,7 +148,7 @@ func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		fmt.Printf("❌ Error reading directory: %v\n", err)
-		return
+		return currentTurn
 	}
 
 	// Process each file
@@ -139,6 +159,12 @@ func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 
 		filename := strings.ToLower(file.Name())
 		currentFiles[filename] = true
+
+		// Try to extract turn number from filename
+		if turnNumber := extractTurnNumber(filename); turnNumber > currentTurn {
+			currentTurn = turnNumber
+			fmt.Printf("🔢 Updated current turn to %d based on filename: %s\n", currentTurn, filename)
+		}
 
 		if info, exists := fileTracker[filename]; !exists {
 			// New file detected
@@ -190,7 +216,7 @@ func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 						previousUser = userList[previousUserIndex]
 						previousUserDiscordID = usernameToDiscordID[previousUser]
 						fmt.Printf("🔔 Sending rename notification to previous user %s for incorrectly named file %s\n", previousUser, filename)
-						webhook.SendRenameWebHook(previousUser, previousUserDiscordID, filename)
+						webhook.SendRenameWebHook(previousUser, previousUserDiscordID, filename, currentTurn)
 					}
 				} else {
 					fmt.Printf("❓ Cannot identify any user for incorrectly named file: %s\n", filename)
@@ -223,8 +249,15 @@ func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 
 				if nextUserIndex >= 0 {
 					nextUser := userList[nextUserIndex]
-					fmt.Printf("🔄 Turn passing from %s to %s\n", foundUser, nextUser)
-					webhook.SendWebHook(foundUser, discordID, nextUser)
+
+					// If we're back to the first user, increment the turn
+					if nextUserIndex == 0 {
+						currentTurn++
+						fmt.Printf("🔄 Full player rotation completed, incrementing turn to %d\n", currentTurn)
+					}
+
+					fmt.Printf("🔄 Turn %d passing from %s to %s\n", currentTurn, foundUser, nextUser)
+					webhook.SendWebHook(foundUser, discordID, nextUser, currentTurn)
 				}
 
 				info.Processed = true
@@ -242,4 +275,6 @@ func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 			fmt.Printf("🗑️ Removed tracking for deleted file: %s\n", filename)
 		}
 	}
+
+	return currentTurn
 }

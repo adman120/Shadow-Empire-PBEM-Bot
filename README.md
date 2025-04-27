@@ -68,14 +68,14 @@ go build -o shadow-empire-bot .
 
 ## 📚 Environment Variables
 
-| Variable              | Description                                                                      | Required | Default  |
-| :-------------------- | :------------------------------------------------------------------------------- | :------: | :------- |
-| `USER_MAPPINGS`       | Comma-separated list of usernames and Discord IDs (format: `Username DiscordID`) |    ✅    | None     |
-| `GAME_NAME`           | Name prefix for save files                                                       |    ❌    | "pbem1"  |
-| `DISCORD_WEBHOOK_URL` | Discord webhook URL for notifications                                            |    ✅    | None     |
-| `WATCH_DIRECTORY`     | Directory to monitor for save files                                              |    ❌    | "./data" |
-| `IGNORE_PATTERNS`     | Comma-separated patterns to ignore in filenames                                  |    ❌    | None     |
-| `FILE_DEBOUNCE_MS`    | Milliseconds to wait after file detection before processing                      |    ❌    | 30000    |
+| Variable              | Description                                                                                 | Required | Default  |
+| :-------------------- | :------------------------------------------------------------------------------------------ | :------: | :------- |
+| `USER_MAPPINGS`       | Comma-separated list of usernames and Discord IDs (format: `TurnNumber Username DiscordID`) |    ✅    | None     |
+| `GAME_NAME`           | Name prefix for save files                                                                  |    ❌    | "pbem1"  |
+| `DISCORD_WEBHOOK_URL` | Discord webhook URL for notifications                                                       |    ✅    | None     |
+| `WATCH_DIRECTORY`     | Directory to monitor for save files                                                         |    ❌    | "./data" |
+| `IGNORE_PATTERNS`     | Comma-separated patterns to ignore in filenames                                             |    ❌    | None     |
+| `FILE_DEBOUNCE_MS`    | Milliseconds to wait after file detection before processing                                 |    ❌    | 30000    |
 
 ### .env File Support
 

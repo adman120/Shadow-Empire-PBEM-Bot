@@ -45,7 +45,7 @@ services:
       # Map to Shadow Empire's default save location
       - "C:/Users/<username>/Documents/My Games/Shadow Empire/<game name>:/app/data"
     environment:
-      - USER_MAPPINGS=Player1 123456789012345678,Player2 234567890123456789
+      - USER_MAPPINGS=1 Player1 123456789012345678,2 Player2 234567890123456789
       - GAME_NAME=PBEM1
       - DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your-webhook-url
       - WATCH_DIRECTORY=/app/data
@@ -82,7 +82,7 @@ go build -o shadow-empire-bot .
 The bot also supports loading environment variables from a `.env` file. Create a file named `.env` in the same directory as the bot executable (or in your mounted `/app` directory when using Docker):
 
 ```ini
-USER_MAPPINGS=Player1 123456789012345678,Player2 234567890123456789
+USER_MAPPINGS=1 Player1 123456789012345678,2 Player2 234567890123456789
 GAME_NAME=PBEM1
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/your-webhook-url
 WATCH_DIRECTORY=./data
@@ -109,7 +109,7 @@ FILE_DEBOUNCE_MS=30000
 The `USER_MAPPINGS` environment variable connects in-game player names with Discord user IDs:
 
 ```ini
-USER_MAPPINGS=Player1 123456789012345678,Player2 234567890123456789
+USER_MAPPINGS=1 Player1 123456789012345678,2 Player2 234567890123456789
 ```
 
 Each mapping follows the format `PlayerName DiscordUserID`, with multiple mappings separated by commas.
@@ -131,7 +131,7 @@ The copied ID is a long number (e.g., 123456789012345678) that uniquely identifi
 
 ```bash
 docker run -d \
-  -e USER_MAPPINGS="Player1 123456789012345678,Player2 234567890123456789" \
+  -e USER_MAPPINGS="1 Player1 123456789012345678,2 Player2 234567890123456789" \
   -e GAME_NAME="PBEM1" \
   -e DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/your-webhook-url" \
   -v "C:/Users/<username>/Documents/My Games/Shadow Empire/<game name>:/app/data" \
@@ -141,7 +141,7 @@ docker run -d \
 ### Running from Source
 
 ```bash
-export USER_MAPPINGS="Player1 123456789012345678,Player2 234567890123456789"
+export USER_MAPPINGS="1 Player1 123456789012345678,2 Player2 234567890123456789"
 export GAME_NAME="PBEM1"
 export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/your-webhook-url"
 export WATCH_DIRECTORY="C:/Users/<username>/Documents/My Games/Shadow Empire/<game name>"

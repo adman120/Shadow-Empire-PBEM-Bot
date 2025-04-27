@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strconv"
@@ -49,7 +50,10 @@ func shouldIgnoreFile(filename string, ignorePatterns []string) bool {
 // MonitorDirectory monitors a directory for new save files and notifies the next player
 func MonitorDirectory(dirPath string) {
 	// Get username to Discord ID mappings from environment variable
-	usernameToDiscordID := userparser.ParseUsers("USER_MAPPINGS")
+	userMappings, err := userparser.ParseUsers("USER_MAPPINGS")
+	if err != nil {
+		log.Fatalf("❌ Failed to parse USER_MAPPINGS: %v. Please check the format (e.g., '1 User1 ID1,2 User2 ID2').", err)
+	}
 
 	// Parse ignore patterns
 	ignorePatterns := parseIgnorePatterns()
@@ -58,12 +62,9 @@ func MonitorDirectory(dirPath string) {
 	}
 
 	// Log the parsed user mappings
-	fmt.Printf("👥 Loaded %d user mappings\n", len(usernameToDiscordID))
-
-	// Extract user list from map keys
-	var userList []string
-	for username := range usernameToDiscordID {
-		userList = append(userList, username)
+	fmt.Printf("👥 Loaded %d user mappings:\n", len(userMappings))
+	for _, mapping := range userMappings {
+		fmt.Printf("  - Order: %d, User: %s, ID: %s\n", mapping.Order, mapping.Username, mapping.DiscordID)
 	}
 
 	// File tracking map with timestamps to implement debouncing
@@ -108,7 +109,7 @@ func MonitorDirectory(dirPath string) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		currentTurn = processDirectory(dirPath, fileTracker, usernameToDiscordID, userList, fileDebounceMs, ignorePatterns, currentTurn)
+		currentTurn = processDirectory(dirPath, fileTracker, userMappings, fileDebounceMs, ignorePatterns, currentTurn)
 	}
 }
 
@@ -130,7 +131,7 @@ func extractTurnNumber(filename string) int {
 // processDirectory handles a single directory scan iteration
 // Returns the current turn number (possibly updated)
 func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
-	usernameToDiscordID map[string]string, userList []string,
+	userMappings []userparser.UserMapping,
 	fileDebounceMs int, ignorePatterns []string, currentTurn int) int {
 
 	now := time.Now().UnixMilli()
@@ -188,77 +189,62 @@ func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 			if !strings.HasPrefix(filename, gameName) {
 				fmt.Printf("⚠️ File %s doesn't match configured game name '%s'\n", filename, gameName)
 
-				// Try to find a username in the file even if the game name is wrong
-				var foundUser string
-				for _, username := range userList {
-					if strings.Contains(filename, strings.ToLower(username)) {
-						foundUser = username
+				// Try to find which user *might* have saved this based on filename content
+				var foundUserIndex = -1 // Index in the userMappings slice
+				for i, mapping := range userMappings {
+					if strings.Contains(filename, strings.ToLower(mapping.Username)) {
+						foundUserIndex = i
 						break
 					}
 				}
 
 				// Find the previous user who should be notified about the naming issue
-				var previousUser string
-				var previousUserDiscordID string
+				if foundUserIndex != -1 {
+					// Determine the index of the user who *should* have saved (previous user in order)
+					previousUserIndex := (foundUserIndex - 1 + len(userMappings)) % len(userMappings)
+					previousUserMapping := userMappings[previousUserIndex]
 
-				if foundUser != "" {
-					// Find the previous user in the turn order
-					previousUserIndex := -1
-					for i, user := range userList {
-						if user == foundUser {
-							// Get previous user (wrapping around if necessary)
-							previousUserIndex = (i - 1 + len(userList)) % len(userList)
-							break
-						}
-					}
+					fmt.Printf("🔔 Sending rename notification to previous user %s (%s) for incorrectly named file %s\n",
+						previousUserMapping.Username, previousUserMapping.DiscordID, filename)
+					webhook.SendRenameWebHook(previousUserMapping.Username, previousUserMapping.DiscordID, filename, currentTurn)
 
-					if previousUserIndex >= 0 {
-						previousUser = userList[previousUserIndex]
-						previousUserDiscordID = usernameToDiscordID[previousUser]
-						fmt.Printf("🔔 Sending rename notification to previous user %s for incorrectly named file %s\n", previousUser, filename)
-						webhook.SendRenameWebHook(previousUser, previousUserDiscordID, filename, currentTurn)
-					}
 				} else {
-					fmt.Printf("❓ Cannot identify any user for incorrectly named file: %s\n", filename)
+					fmt.Printf("❓ Cannot identify any user for incorrectly named file: %s. Cannot determine who to notify.\n", filename)
 				}
 
 				info.Processed = true
 				continue
 			}
 
-			// Find username in filename
-			var foundUser string
-			for _, username := range userList {
-				if strings.Contains(filename, strings.ToLower(username)) {
-					foundUser = username
+			// Find username in filename to identify the *next* player
+			var foundUserIndex = -1 // Index in the userMappings slice
+			for i, mapping := range userMappings {
+				// Check if the filename contains the *next* player's username (case-insensitive)
+				// The save file format is typically game_turnX_nextPlayer
+				if strings.Contains(filename, strings.ToLower(mapping.Username)) {
+					foundUserIndex = i
 					break
 				}
 			}
 
-			if foundUser != "" {
-				discordID := usernameToDiscordID[foundUser]
+			if foundUserIndex != -1 {
+				// The user found in the filename is the *next* player
+				nextUserMapping := userMappings[foundUserIndex]
 
-				// Find next user
-				nextUserIndex := -1
-				for i, user := range userList {
-					if user == foundUser {
-						nextUserIndex = (i + 1) % len(userList)
-						break
-					}
+				// Determine the index of the user who just finished their turn (previous user in order)
+				currentUserIndex := (foundUserIndex - 1 + len(userMappings)) % len(userMappings)
+				currentUserMapping := userMappings[currentUserIndex]
+
+				// If the next user is the first in the list, increment the turn
+				// (assuming the list is sorted 1, 2, 3...)
+				if nextUserMapping.Order == 1 { // Check if the *next* user is the first one
+					currentTurn++
+					fmt.Printf("🔄 Full player rotation completed, incrementing turn to %d\n", currentTurn)
 				}
 
-				if nextUserIndex >= 0 {
-					nextUser := userList[nextUserIndex]
-
-					// If we're back to the first user, increment the turn
-					if nextUserIndex == 0 {
-						currentTurn++
-						fmt.Printf("🔄 Full player rotation completed, incrementing turn to %d\n", currentTurn)
-					}
-
-					fmt.Printf("🔄 Turn %d passing from %s to %s\n", currentTurn, foundUser, nextUser)
-					webhook.SendWebHook(foundUser, discordID, nextUser, currentTurn)
-				}
+				fmt.Printf("🔄 Turn %d passing from %s to %s\n", currentTurn, currentUserMapping.Username, nextUserMapping.Username)
+				// Send webhook to the *next* player
+				webhook.SendWebHook(currentUserMapping.Username, nextUserMapping.DiscordID, nextUserMapping.Username, currentTurn)
 
 				info.Processed = true
 			} else {

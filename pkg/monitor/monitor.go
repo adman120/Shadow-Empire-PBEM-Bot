@@ -216,35 +216,43 @@ func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 				continue
 			}
 
-			// Find username in filename to identify the *next* player
-			var foundUserIndex = -1 // Index in the userMappings slice
+			// Find username in filename to identify the player whose turn it *is*
+			var currentPlayerIndex = -1 // Index in the userMappings slice
 			for i, mapping := range userMappings {
-				// Check if the filename contains the *next* player's username (case-insensitive)
-				// The save file format is typically game_turnX_nextPlayer
+				// Check if the filename contains the *current* player's username (case-insensitive)
 				if strings.Contains(filename, strings.ToLower(mapping.Username)) {
-					foundUserIndex = i
+					currentPlayerIndex = i
 					break
 				}
 			}
 
-			if foundUserIndex != -1 {
-				// The user found in the filename is the *next* player
-				nextUserMapping := userMappings[foundUserIndex]
+			if currentPlayerIndex != -1 {
+				// The user found in the filename is the *current* player
+				currentUserMapping := userMappings[currentPlayerIndex]
 
-				// Determine the index of the user who just finished their turn (previous user in order)
-				currentUserIndex := (foundUserIndex - 1 + len(userMappings)) % len(userMappings)
-				currentUserMapping := userMappings[currentUserIndex]
+				// Determine the index of the *next* player in the order
+				nextPlayerIndex := (currentPlayerIndex + 1) % len(userMappings)
+				nextUserMapping := userMappings[nextPlayerIndex]
 
-				// If the next user is the first in the list, increment the turn
-				// (assuming the list is sorted 1, 2, 3...)
-				if nextUserMapping.Order == 1 { // Check if the *next* user is the first one
-					currentTurn++
-					fmt.Printf("🔄 Full player rotation completed, incrementing turn to %d\n", currentTurn)
+				// Determine the index of the player who just finished (previous player)
+				previousPlayerIndex := (currentPlayerIndex - 1 + len(userMappings)) % len(userMappings)
+				previousUserMapping := userMappings[previousPlayerIndex]
+
+				// Determine the turn number for the *next* save file instruction
+				saveInstructionTurnNumber := currentTurn
+				// Check if the *current* player (whose file we are processing) is the last in the order.
+				// If so, the save instruction should be for the *next* turn.
+				if currentPlayerIndex == len(userMappings)-1 {
+					saveInstructionTurnNumber = currentTurn + 1
+					fmt.Printf("🔄 Last player (%s) finished turn %d, next save will start turn %d\n", currentUserMapping.Username, currentTurn, saveInstructionTurnNumber)
+					// Update the main turn counter *after* processing this file and determining the instruction number
+					currentTurn = saveInstructionTurnNumber
 				}
 
-				fmt.Printf("🔄 Turn %d passing from %s to %s\n", currentTurn, currentUserMapping.Username, nextUserMapping.Username)
-				// Send webhook to the *next* player
-				webhook.SendWebHook(currentUserMapping.Username, nextUserMapping.DiscordID, nextUserMapping.Username, currentTurn)
+				fmt.Printf("🔄 Turn %d: It's %s's turn (save from %s). Next up: %s (for turn %d)\n", currentTurn, currentUserMapping.Username, previousUserMapping.Username, nextUserMapping.Username, saveInstructionTurnNumber)
+
+				// Send webhook to the *current* player, instructing them to save for the *next* player, using the correct turn number for the save instruction
+				webhook.SendWebHook(currentUserMapping.Username, currentUserMapping.DiscordID, nextUserMapping.Username, saveInstructionTurnNumber)
 
 				info.Processed = true
 			} else {

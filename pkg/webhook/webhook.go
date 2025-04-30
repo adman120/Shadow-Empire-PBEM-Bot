@@ -117,14 +117,16 @@ func sendDiscordWebhook(payload *types.DiscordWebhook, username, discordID strin
 }
 
 // SendWebHook sends a Discord webhook notification to the next player
-func SendWebHook(username, discordID, nextUser string, turnNumber int) error {
+// targetUsername/targetDiscordID: The player whose turn it is now (will be pinged)
+// nextPlayerSaveName: The username of the player *after* the target player (used for save instructions)
+func SendWebHook(targetUsername, targetDiscordID, nextPlayerSaveName string, turnNumber int) error {
 	gameName := getGameName()
 
 	// Create webhook payload
 	payload := types.DiscordWebhook{
 		Username:  "Shadow Empire Assistant",
 		AvatarURL: "https://raw.githubusercontent.com/auricom/home-ops/main/docs/src/assets/logo.png",
-		Content:   fmt.Sprintf("🎲 It's your turn, <@%s>!", discordID),
+		Content:   fmt.Sprintf("🎲 It's your turn, <@%s>!", targetDiscordID), // Ping the target player
 		Embeds: []types.Embed{
 			{
 				Color: 0xFFA500,
@@ -133,8 +135,9 @@ func SendWebHook(username, discordID, nextUser string, turnNumber int) error {
 				},
 				Fields: []types.Field{
 					{
-						Name:  "📋 Save File Instructions",
-						Value: fmt.Sprintf("After completing your turn, please save the file as:\n```\n%s_turn%d_%s\n```", gameName, turnNumber, nextUser),
+						Name: "📋 Save File Instructions",
+						// Instruct to save for the player *after* the current one
+						Value: fmt.Sprintf("After completing your turn, please save the file as:\n```\n%s_turn%d_%s\n```", gameName, turnNumber, nextPlayerSaveName),
 					},
 				},
 				Footer: types.Footer{
@@ -145,7 +148,8 @@ func SendWebHook(username, discordID, nextUser string, turnNumber int) error {
 		},
 	}
 
-	return sendDiscordWebhook(&payload, username, discordID, false)
+	// Pass targetUsername for logging purposes in sendDiscordWebhook
+	return sendDiscordWebhook(&payload, targetUsername, targetDiscordID, false)
 }
 
 // SendRenameWebHook sends a Discord webhook notification asking to rename a file

@@ -51,6 +51,8 @@ services:
       - WATCH_DIRECTORY=/app/data
       - IGNORE_PATTERNS=backup,temp
       - FILE_DEBOUNCE_MS=30000
+      - FILE_AGE_LIMIT=
+      - FILE_CHECK_TIME=1
     restart: unless-stopped
 ```
 

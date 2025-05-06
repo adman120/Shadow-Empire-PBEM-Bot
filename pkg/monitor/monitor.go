@@ -13,126 +13,134 @@ import (
 	"github.com/1Solon/shadow-empire-pbem-bot/pkg/webhook"
 )
 
-// FileTrackingInfo stores information about when a file was first seen
+// FileTrackingInfo stores information about when a file was first seen and whether it has been processed.
 type FileTrackingInfo struct {
-	FirstSeen int64
-	Processed bool
+	FirstSeen int64  // Timestamp when the file was first detected.
+	Processed bool   // Flag indicating if the file has been processed.
 }
 
-// parseIgnorePatterns parses comma-separated ignore patterns from environment variable
+// parseIgnorePatterns parses comma-separated ignore patterns from the environment variable IGNORE_PATTERNS.
+// These patterns are used to determine which files should be ignored.
 func parseIgnorePatterns() []string {
-	patterns := os.Getenv("IGNORE_PATTERNS")
+	patterns := os.Getenv("IGNORE_PATTERNS") // Get the value of the environment variable.
 	if patterns == "" {
-		return []string{}
+		return []string{} // Return an empty slice if the variable is not set.
 	}
 	var result []string
-	for _, pattern := range strings.Split(patterns, ",") {
-		result = append(result, strings.ToLower(strings.TrimSpace(pattern)))
+	for _, pattern := range strings.Split(patterns, ",") { // Split the string by commas.
+		result = append(result, strings.ToLower(strings.TrimSpace(pattern))) // Trim spaces and convert to lowercase.
 	}
 	return result
 }
 
-// shouldIgnoreFile checks if a filename contains any of the ignore patterns
+// shouldIgnoreFile checks if a filename contains any of the ignore patterns.
+// It returns true if the file should be ignored, false otherwise.
 func shouldIgnoreFile(filename string, ignorePatterns []string) bool {
 	if len(ignorePatterns) == 0 {
-		return false
+		return false // If there are no patterns, don't ignore any files.
 	}
 
-	lowerFilename := strings.ToLower(filename)
+	lowerFilename := strings.ToLower(filename) // Convert the filename to lowercase for case-insensitive comparison.
 	for _, pattern := range ignorePatterns {
 		if strings.Contains(lowerFilename, pattern) {
-			return true
+			return true // If the filename contains any of the patterns, ignore it.
 		}
 	}
 	return false
 }
 
-// MonitorDirectory monitors a directory for new save files and notifies the next player
+// MonitorDirectory monitors a directory for new save files and notifies the next player.
+// This is the main function that starts the monitoring process.
 func MonitorDirectory(dirPath string) {
-	// Get username to Discord ID mappings from environment variable
+	// Get username to Discord ID mappings from the environment variable USER_MAPPINGS.
 	userMappings, err := userparser.ParseUsers("USER_MAPPINGS")
 	if err != nil {
 		log.Fatalf("❌ Failed to parse USER_MAPPINGS: %v. Please check the format (e.g., '1 User1 ID1,2 User2 ID2').", err)
 	}
 
-	// Parse ignore patterns
+	// Parse ignore patterns from the environment variable.
 	ignorePatterns := parseIgnorePatterns()
 	if len(ignorePatterns) > 0 {
 		fmt.Printf("🚫 Loaded %d ignore patterns\n", len(ignorePatterns))
 	}
 
-	// Log the parsed user mappings
+	// Log the parsed user mappings.  This is helpful for debugging.
 	fmt.Printf("👥 Loaded %d user mappings:\n", len(userMappings))
 	for _, mapping := range userMappings {
-		fmt.Printf("  - Order: %d, User: %s, ID: %s\n", mapping.Order, mapping.Username, mapping.DiscordID)
+		fmt.Printf("  - Order: %d, User: %s, ID: %s\n", mapping.Order, mapping.Username, mapping.DiscordID)
 	}
 
-	// File tracking map with timestamps to implement debouncing
+	// File tracking map with timestamps to implement debouncing.
+	// The key is the filename (lowercase), and the value is a pointer to a FileTrackingInfo struct.
 	fileTracker := make(map[string]*FileTrackingInfo)
 
-	// Current turn tracking
+	// Current turn tracking.  This is initialized to 1 and updated as new files are processed.
 	currentTurn := 1
 
-	// Get file debounce time from environment or default to 30 seconds
-	fileDebounceMs := 30000
+	// Get file debounce time from the environment or default to 30 seconds.
+	// Debouncing is used to ensure that a file is completely written before it's processed.
+	fileDebounceMs := 30000 // Default to 30000 milliseconds (30 seconds).
 	if debounceEnv := os.Getenv("FILE_DEBOUNCE_MS"); debounceEnv != "" {
 		if parsed, err := strconv.Atoi(debounceEnv); err == nil {
-			fileDebounceMs = parsed
+			fileDebounceMs = parsed // Override with the value from the environment variable if it's valid.
 		}
 	}
 	fmt.Printf("⏱️ File debounce time set to %d seconds\n", fileDebounceMs/1000)
 
-	// Initialize tracker with existing files as already processed
+	// Initialize tracker with existing files as already processed.
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		fmt.Printf("❌ Error reading directory: %v\n", err)
-		return
+		return // Exit the function if there's an error reading the directory.
 	}
 
 	for _, file := range files {
-		if !file.IsDir() {
+		if !file.IsDir() { // Only process files, not directories.
 			lowerFilename := strings.ToLower(file.Name())
 			fileTracker[lowerFilename] = &FileTrackingInfo{
-				FirstSeen: time.Now().UnixMilli(),
-				Processed: true,
+				FirstSeen: time.Now().UnixMilli(), // Use the current time.
+				Processed: true,                 // Mark existing files as processed.
 			}
 		}
 	}
 	fmt.Printf("📋 Initialized with %d existing files\n", len(fileTracker))
 
-	// Set up polling interval (check every 5 seconds)
+	// Set up polling interval (check every 5 seconds).
 	pollInterval := 5 * time.Second
 
 	fmt.Printf("👁️ Started monitoring directory: %s (polling every %v)\n", dirPath, pollInterval)
 
-	ticker := time.NewTicker(pollInterval)
-	defer ticker.Stop()
+	ticker := time.NewTicker(pollInterval) // Create a ticker that ticks every pollInterval.
+	defer ticker.Stop()                   // Ensure the ticker is stopped when the function exits.
+	// Initialize lastCheckTime
+	lastCheckTime := time.Now()
 
 	for range ticker.C {
-		currentTurn = processDirectory(dirPath, fileTracker, userMappings, fileDebounceMs, ignorePatterns, currentTurn)
+		currentTurn = processDirectory(dirPath, fileTracker, userMappings, fileDebounceMs, ignorePatterns, currentTurn, &lastCheckTime)
 	}
 }
 
-// extractTurnNumber attempts to extract turn number from a filename
+// extractTurnNumber attempts to extract the turn number from a filename.
+// It uses a regular expression to find the turn number in the filename.
 func extractTurnNumber(filename string) int {
 	// First try the standard pattern: something_turn#_something
-	turnPattern := regexp.MustCompile(`_turn(\d+)_`)
-	matches := turnPattern.FindStringSubmatch(strings.ToLower(filename))
+	turnPattern := regexp.MustCompile(`_turn(\d+)_`) // Regular expression to find "_turn<number>_".
+	matches := turnPattern.FindStringSubmatch(strings.ToLower(filename)) // Find the pattern in the lowercase filename.
 
-	if len(matches) > 1 {
+	if len(matches) > 1 { // Check if there's a match (matches[0] is the whole string, matches[1] is the captured group).
 		if num, err := strconv.Atoi(matches[1]); err == nil {
-			return num
+			return num // Convert the captured group to an integer and return it.
 		}
 	}
 
-	return 0 // Return 0 if no turn number found
+	return 0 // Return 0 if no turn number is found.
 }
 
-// processDirectory handles a single directory scan iteration
-// Returns the current turn number (possibly updated)
+// processDirectory handles a single directory scan iteration.
+// Returns the current turn number (possibly updated).
 func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 	userMappings []userparser.UserMapping,
-	fileDebounceMs int, ignorePatterns []string, currentTurn int) int {
+	fileDebounceMs int, ignorePatterns []string, currentTurn int, lastCheckTime *time.Time) int {
 
 	now := time.Now().UnixMilli()
 
@@ -144,6 +152,8 @@ func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 
 	// Track current files to detect deleted ones
 	currentFiles := make(map[string]bool)
+	var latestFileTime int64 = 0
+	var latestFileName string
 
 	// Read all files in directory
 	files, err := os.ReadDir(dirPath)
@@ -236,7 +246,7 @@ func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 
 				// Determine the index of the player who just finished (previous player)
 				previousPlayerIndex := (currentPlayerIndex - 1 + len(userMappings)) % len(userMappings)
-				previousUserMapping := userMappings[previousPlayerIndex]
+				previousUserMapping := userMappings[previousUserIndex]
 
 				// Determine the turn number for the *next* save file instruction
 				saveInstructionTurnNumber := currentTurn
@@ -260,8 +270,18 @@ func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 				info.Processed = true
 			}
 		}
+		//check for the latest file
+		fileInfo, err := os.Stat(dirPath + "/" + file.Name())
+		if err != nil {
+			fmt.Printf("Error getting file info for %s: %v\n", file.Name(), err)
+			continue
+		}
+		if fileInfo.ModTime().Unix() > latestFileTime {
+			latestFileTime = fileInfo.ModTime().Unix()
+			latestFileName = file.Name()
+		}
 	}
-
+	checkFileAge(latestFileTime, latestFileName, lastCheckTime, userMappings)
 	// Clean up tracking for deleted files
 	for filename := range fileTracker {
 		if !currentFiles[filename] {
@@ -272,3 +292,57 @@ func processDirectory(dirPath string, fileTracker map[string]*FileTrackingInfo,
 
 	return currentTurn
 }
+
+// checkFileAge checks the age of the latest file and sends a Discord notification if it exceeds the limit.
+func checkFileAge(latestFileTime int64, latestFileName string, lastCheckTime *time.Time, userMappings []userparser.UserMapping) {
+	fileCheckTime := 24 * time.Hour //check every 24 hours
+	fileCheckTimeEnv := os.Getenv("FILE_CHECK_TIME")
+	if fileCheckTimeEnv != "" {
+		duration, err := time.ParseDuration(fileCheckTimeEnv)
+		if err != nil {
+			log.Printf("Invalid FILE_CHECK_TIME value: %s. Using default (24h).\n", fileCheckTimeEnv)
+		} else {
+			fileCheckTime = duration
+		}
+	}
+
+	now := time.Now()
+	if now.Sub(*lastCheckTime) >= fileCheckTime {
+		*lastCheckTime = now
+		fileAgeLimit := 24 * time.Hour // Default to 24 hours
+		fileAgeLimitEnv := os.Getenv("FILE_AGE_LIMIT")
+		if fileAgeLimitEnv != "" {
+			duration, err := time.ParseDuration(fileAgeLimitEnv)
+			if err != nil {
+				log.Printf("Invalid FILE_AGE_LIMIT value: %s. Using default (24h).\n", fileAgeLimitEnv)
+			} else {
+				fileAgeLimit = duration
+			}
+		}
+
+		fileAge := time.Duration(now.Unix() - latestFileTime) * time.Second
+
+		if fileAge > fileAgeLimit {
+			fmt.Printf("⏰ Latest file (%s) is older than %v (%v old). Sending Discord notification.\n", latestFileName, fileAgeLimit, fileAge)
+			//find user
+			var currentPlayerIndex = -1 // Index in the userMappings slice
+			for i, mapping := range userMappings {
+				// Check if the filename contains the  player's username (case-insensitive)
+				if strings.Contains(latestFileName, strings.ToLower(mapping.Username)) {
+					currentPlayerIndex = i
+					break
+				}
+			}
+			if currentPlayerIndex != -1 {
+				currentUserMapping := userMappings[currentPlayerIndex]
+				webhook.SendFileAgeWarningWebHook(latestFileName, fileAge, fileAgeLimit, currentUserMapping.Username, currentUserMapping.DiscordID)
+			} else {
+				webhook.SendFileAgeWarningWebHook(latestFileName, fileAge, fileAgeLimit, "", "")
+			}
+
+		} else {
+			fmt.Printf("Latest file (%s) is %v old, which is within the limit (%v).\n", latestFileName, fileAge, fileAgeLimit)
+		}
+	}
+}
+

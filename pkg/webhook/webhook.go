@@ -184,3 +184,43 @@ func SendRenameWebHook(username, discordID, filename string, turnNumber int) err
 
 	return sendDiscordWebhook(&payload, username, discordID, true)
 }
+
+// SendFileAgeWarningWebHook sends a Discord webhook notification warning about an old file.
+func SendFileAgeWarningWebHook(filename string, fileAge time.Duration, fileAgeLimit time.Duration, targetUsername string, targetDiscordID string) error {
+	gameName := getGameName()
+
+	content := fmt.Sprintf("⚠️ The save file is older than the limit (%v).", fileAgeLimit)
+	if targetDiscordID != "" {
+		content = fmt.Sprintf("🎲 <@%s>, The save file is older than the limit (%v).  It may be your turn!", targetDiscordID, fileAgeLimit) // Ping
+	}
+
+	// Create webhook payload
+	payload := types.DiscordWebhook{
+		Username:  "Shadow Empire Assistant",
+		AvatarURL: "https://raw.githubusercontent.com/auricom/home-ops/main/docs/src/assets/logo.png",
+		Content:   content,
+		Embeds: []types.Embed{
+			{
+				Color: 0xFF8C00, // Dark Orange
+				Thumbnail: types.Thumbnail{
+					URL: "https://upload.wikimedia.org/wikipedia/en/4/4f/Shadow_Empire_cover.jpg",
+				},
+				Fields: []types.Field{
+					{
+						Name:  "⏰ File Age Warning",
+						Value: fmt.Sprintf("The latest save file (%s) is %v old.  The limit is %v.", filename, fileAge, fileAgeLimit),
+					},
+					{
+						Name:  "❓ Possible Stale Turn", // added name
+						Value: "Please check if it is your turn.  If it is, please take your turn and save a new file.", // added value
+					},
+				},
+				Footer: types.Footer{
+					Text: "Made with ❤️ by Solon",
+				},
+				Timestamp: time.Now().Format(time.RFC3339),
+			},
+		},
+	}
+	return sendDiscordWebhook(&payload, targetUsername, targetDiscordID, false)
+}
